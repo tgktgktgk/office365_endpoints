@@ -42,7 +42,6 @@ function msgHello() {
     Write-Output "自動的に最新情報をJSONファイルとしてローカル ディレクトリに保存します"
     Write-Output "ディレクトリは規定として「D:\o365endpoints\endpoints」に設定されています。"
     Write-Output ""
-    Write-Output "※ 定期的にプログラムを実施し、"
     Write-Output "参考：https://docs.microsoft.com/en-us/office365/enterprise/urls-and-ip-address-ranges"
     Write-Output "-----------------------------------------------------------------------------------------"
     Write-Output ""
