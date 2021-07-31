@@ -91,7 +91,6 @@ switch ($inputValue) {
         $clientRequestId = [GUID]::NewGuid().Guid
         $deviceVersion = "current_version.txt"
 
-        ## ローカルにGUIDおよび最新バージョンの情報があるか確認
         if (Test-Path $rootPath$directory$deviceVersion) {
             $currentVersion = Get-Content $rootPath$directory$deviceVersion
 
@@ -106,7 +105,6 @@ switch ($inputValue) {
 
         }
 
-        ## 更新されたendpointsのバージョンがあるか確認
         $version = Invoke-RestMethod -Uri ($ws + "/version/Worldwide?clientRequestId=" + $clientRequestId)
         if ($version.latest -gt $currentVersion) {
             Write-Output ""
@@ -121,24 +119,22 @@ switch ($inputValue) {
             Write-Output "Downloading..."
             Write-Output ""
 
-            ## $downloadPath(D:\o365endpoints\endpoints)が存在しない場合、新しいディレクトリを作成
             switch (Test-Path $downloadPath) {
                 $True { Break }
                 $False { New-Item -Path $rootPath$directory -Name $subfolder_Download -ItemType "directory" }
 
             }
 
-            ## download the latest version of endpoints (noipv6)
+            # download the latest version of endpoints (noipv6)
             $url = "$ws/endpoints/Worldwide?noipv6&clientRequestId=$clientRequestId"
             $file = $downloadPath + $version.latest + ".json"
             $webclient.DownloadFile($url, $file)
 
-            ## download the history of endpoints (noipv6)
+            # download the change history of endpoints (noipv6)
             $url = "$ws/changes/worldwide/0000000000?noipv6&clientRequestId=$clientRequestId"
             $file = $rootPath + $directory + "history.json"
             $webclient.DownloadFile($url, $file)
 
-            ## 更新された$version.latestの情報をローカルに保存 
             $version.latest | Out-File $rootPath$directory$currentVersion
 
             Write-Output ""
@@ -187,8 +183,7 @@ switch ($inputValue) {
 
                         switch ($true) {
                             ($refNum -lt 10) { $str = " " + "$refNum" + '. ' + $versionHistory[$i].version }
-                            ## ($refNum -ge 10) { $str = "$refNum" + '. ' + $versionHistory[$i].version }
-                            ($refNum -eq 10) { $str = " a. see more" }
+                            ($refNum -eq 10) { $str = " a. view more" }
 
                         }
 
@@ -429,7 +424,6 @@ switch ($inputValue) {
 
 }
 
-## 比較した結果を保存するパスを指定 
 if (!(Test-Path $reportPath)) { New-Item -Path $rootPath$directory -Name $subfolder_Report -ItemType "directory" }
 
 $time = Get-Date -Format "yyyyMMdd_HHmmss"
