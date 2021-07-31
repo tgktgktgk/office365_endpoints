@@ -1,38 +1,19 @@
-﻿## 関数：10進数 -> 16進数
-function toHex([String]$inputString) {
-    $marks = ".../"
-    $decNum = $inputString.Split("[\.\/]")
-    $str = $null
+﻿# web service URL
+$ws = "https://endpoints.office.com"
 
-    for ($i = 0; $i -lt $decNum.Count; $i++) {
-        $hexNum = [String]::Format("{0:x2}", [Int]$decNum[$i])
-        $str += $hexNum
-        $str += $marks[$i]
-    }
-    return $str 
+# assign directory and subfolders
+$rootPath             = "D:\Desktop\"
+$directory            = "o365_ep\"
+$subfolder_Download   = "endpoints"
+$subfolder_Report     = "reports"
 
-}
+$downloadPath = $rootPath + $directory + $subfolder_Download
+$reportPath   = $rootPath + $directory + $subfolder_Report
 
-## 関数：16進数 -> 10進数
-function toDec([String]$inputString) {
-    $marks = ".../"
-    $hexNum = $inputString.Split("[\.\/]")
-    $str = $null
-
-    for ($i = 0; $i -lt $hexNum.Count; $i++) {
-        $decNum = [Convert]::ToInt32($hexNum[$i], 16)
-        $str += [String]$decNum
-        $str += $marks[$i]
-    }
-    return $str
-
-}
-
-## メッセージ：プログラム起動
 function msgHello() {
-    Write-Output "---------------------------------"
-    Write-Output "| Managing Office 365 endpoints |"
-    Write-Output "---------------------------------"
+    Write-Output "                        ============================================"
+    Write-Output "                           Microsoft Office 365 Endpoints Manager   "
+    Write-Output "                        ============================================"
     Write-Output ""
     Write-Output "このプログラムはMicrosoft社の公式ドキュメントの"
     Write-Output "『Office 365 URLs and IP address ranges(以下、エンドポイント)』"
@@ -42,164 +23,172 @@ function msgHello() {
     Write-Output "自動的に最新情報をJSONファイルとしてローカル ディレクトリに保存します"
     Write-Output "ディレクトリは規定として「D:\o365endpoints\endpoints」に設定されています。"
     Write-Output ""
-    Write-Output "※ 定期的にプログラムを実施し、"
-    Write-Output "参考：https://docs.microsoft.com/en-us/office365/enterprise/urls-and-ip-address-ranges"
-    Write-Output "-----------------------------------------------------------------------------------------"
+    Write-Output "reference：[Office 365 URLs and IP address ranges]"
+    Write-Output "           https://docs.microsoft.com/en-us/office365/enterprise/urls-and-ip-address-ranges"
+    Write-Output "--------------------------------------------------------------------------------------------"
     Write-Output ""
+
 }
 
-## メッセージ：アップデートの検知 
-function msgDetected() {
-    Write-Output ""
-    Write-Output "======================================================================================="
-    Write-Output "New version of Office 365 worldwide commercial service instance endpoints detected"
-    Write-Output "======================================================================================="
-    Write-Output "" 
+#############################################
+##### FUNCTION
+
+# F1: convert decimal IP address to hex
+function iptoHex([String]$inputString) {
+    $marks = ".../"
+    $decIp = $inputString.Split("[\.\/]")
+    $str = $null
+
+    for ($i = 0; $i -lt $decIp.Count; $i++) {
+        $hexIp = [String]::Format("{0:x2}", [Int]$decIp[$i])
+        $str += $hexIp
+        $str += $marks[$i]
+    }
+
+    return $str
+
 }
 
-## メッセージ：アップデートの完了 
-function msgCompleted() {
-    Write-Output ""
-    Write-Output "============================================================================"
-    Write-Output "Office 365 worldwide commercial service instance endpoints are up-to-date"
-    Write-Output "============================================================================"
-    Write-Output ""
+# F2: convert hex IP address to decimal
+function iptoDec([String]$inputString) {
+    $marks = ".../"
+    $hexIp = $inputString.Split("[\.\/]")
+    $str = $null
+
+    for ($i = 0; $i -lt $hexIp.Count; $i++) {
+        $decIp = [Convert]::ToInt32($hexIp[$i], 16)
+        $str += [String]$decIp
+        $str += $marks[$i]
+    }
+
+    return $str
+
 }
 
-## 関数：指定した範囲内で重複の検査
+# F3: check for duplication
 function dpCheck([String]$inputString, [System.Array]$inputArray) {
     return $inputArray -contains $inputString
+
 }
 
-##########
-##########
 
-## Webサービス URL 
-$ws = "https://endpoints.office.com" 
-
-## GUIDおよび最新バージョンの日付を保存するパスを指定 
-$datapath = "D:\" 
-$foldername = "o365endpoints\" 
-$filename = "endpoints_clientid_latestversion.txt" 
-
-## endpointsが保存されているパスを指定 
-$savepath = $datapath + $foldername + "endpoints\" 
-
-<#
-$datapath$foldername$filename : "D:\o365endpoints\endpoints_clientid_lastversion.txt"
-#> 
+##########################################################################
+##########################################################################
 
 msgHello
 Write-Output "0. Exit"
 Write-Output "1. Start"
 
-$direction = $null 
-do { 
-    [String]$direction = Read-Host "入力"
+$inputValue = $null
+do {
+    [String]$inputValue = Read-Host "Input"
 
-} while (!($direction -eq 0 -or $direction -eq 1))
+} while (!($inputValue -eq 0 -or $inputValue -eq 1))
 
-switch ($direction) {
-    0 { exit } #switch ($direction) condition (0) end //
-
+switch ($inputValue) {
+    0 { exit }
     1 {
+        $clientRequestId = [GUID]::NewGuid().Guid
+        $deviceVersion = "current_version.txt"
+
         ## ローカルにGUIDおよび最新バージョンの情報があるか確認
-        if (Test-Path $datapath$foldername$filename) {
-            $content = Get-Content $datapath$foldername$filename
-            $clientRequestId = $content[0]
-            $latestVersion = $content[1]
+        if (Test-Path $rootPath$directory$deviceVersion) {
+            $currentVersion = Get-Content $rootPath$directory$deviceVersion
 
-        } else { 
-            ## $datapath$foldername(D:\o365endpoints\)が存在しない場合、新しいディレクトリを作成 
-            switch (Test-Path $datapath$foldername) { 
-                $False { New-Item -Path $datapath -Name $foldername -ItemType "directory" } 
+        } else {
+            switch (Test-Path $rootPath$directory) { 
+                $False { New-Item -Path $rootPath -Name $directory -ItemType "directory" } 
                 $True { }
-            } 
+            }
 
-            ## GUIDの発行およびlatestVersionの初期化 
-            $clientRequestId = [GUID]::NewGuid().Guid 
-            $latestVersion = "0000000000" 
-            @($clientRequestId, $latestVersion) | Out-File $datapath$foldername$filename
+            $currentVersion = "0000000000"
+            $currentVersion | Out-File $rootPath$directory$deviceVersion
 
         }
 
         ## 更新されたendpointsのバージョンがあるか確認
         $version = Invoke-RestMethod -Uri ($ws + "/version/Worldwide?clientRequestId=" + $clientRequestId)
-        if ($version.latest -gt $latestVersion) {
-            ## メッセージ：アップデートの検知
-            msgDetected
+        if ($version.latest -gt $currentVersion) {
+            Write-Output ""
+            Write-Output "========================================================================================"
+            Write-Output "   New version of Office 365 worldwide commercial service instance endpoints detected   "
+            Write-Output "========================================================================================"
+            Write-Output ""
 
-            ## jsonファイルをダウンロードするために必要なwebclientを宣言 
             $webclient = New-Object System.Net.WebClient
 
             Write-Output ""
-            Write-Output "ダウンロード中"
+            Write-Output "Downloading..."
             Write-Output ""
 
-            ## $savepath(D:\o365endpoints\endpoints)が存在しない場合、新しいディレクトリを作成
-            switch (Test-Path $savepath) {
+            ## $downloadPath(D:\o365endpoints\endpoints)が存在しない場合、新しいディレクトリを作成
+            switch (Test-Path $downloadPath) {
                 $True { Break }
-                $False { New-Item -Path $datapath$foldername -Name "endpoints" -ItemType "directory" }
+                $False { New-Item -Path $rootPath$directory -Name $subfolder_Download -ItemType "directory" }
 
             }
 
-            ## 最新版のendpointsをダウンロード (noipv6) 
+            ## download the latest version of endpoints (noipv6)
             $url = "$ws/endpoints/Worldwide?noipv6&clientRequestId=$clientRequestId"
-            $file = $savepath + $version.latest + ".json"
-            $webclient.DownloadFile($url, $file) 
+            $file = $downloadPath + $version.latest + ".json"
+            $webclient.DownloadFile($url, $file)
 
-            ## endpointsの変更の履歴をダウンロード (noipv6) 
+            ## download the history of endpoints (noipv6)
             $url = "$ws/changes/worldwide/0000000000?noipv6&clientRequestId=$clientRequestId"
-            $file = $datapath + $foldername + "history.json"
-            $webclient.DownloadFile($url, $file) 
+            $file = $rootPath + $directory + "history.json"
+            $webclient.DownloadFile($url, $file)
 
             ## 更新された$version.latestの情報をローカルに保存 
-            @($clientRequestId, $version.latest) | Out-File $datapath$foldername$filename
+            $version.latest | Out-File $rootPath$directory$currentVersion
 
-            ## メッセージ：アップデートの完了
-            msgCompleted 
+            Write-Output ""
+            Write-Output "============================================================================="
+            Write-Output "  Office 365 worldwide commercial service instance endpoints are up-to-date  "
+            Write-Output "============================================================================="
+            Write-Output ""
 
         }
-        else { 
-            ## メッセージ：アップデートの完了
-            msgCompleted 
+        else {
+            Write-Output ""
+            Write-Output "============================================================================="
+            Write-Output "  Office 365 worldwide commercial service instance endpoints are up-to-date  "
+            Write-Output "============================================================================="
+            Write-Output ""
+
         } 
 
-        Write-Output ""
-        Write-Output "動作を選んでください"
+        Write-Output "0. Exit"
+        Write-Output "1. Write a report"
 
-        Write-Output "0. プログラムを終了する"
-        Write-Output "1. 差分を取得する"
-
-        $answer = $null
+        $inputValue = $null
         do {
-            [String]$answer = Read-Host "入力"
+            [String]$inputValue = Read-Host "Input"
 
-        } while (!($answer -eq 0 -or $answer -eq 1)) 
+        } while (!($inputValue -eq 0 -or $inputValue -eq 1))
 
         Write-Output ""
-        switch ($answer) { 
-            0 { exit } #switch ($answer) condition 0 end //
-            1 { 
-                $hPath = $datapath + $foldername + "history.json"
+        switch ($inputValue) {
+            0 { exit }
+            1 {
+                $hPath = $rootPath + $directory + "history.json"
                 $history = Get-Content -Path $hPath | ConvertFrom-Json
-                $vList = $history | Select-Object -Property "version" -Unique | Sort-Object "version" -Descending
+                $versionHistory = $history | Select-Object -Property "version" -Unique | Sort-Object "version" -Descending
 
-                Write-Output "最新版のエンドポイントと比較するエンドポイントのバージョンを入力してください"
-                Write-Output " 0. プログラムを終了する"
+                Write-Output "select a version to compare with"
+                Write-Output " 0. Exit"
                 
                 $refNum = 0
-                for ($i = 1; $i -lt $vList.Count; $i++) {
+                for ($i = 1; $i -lt $versionHistory.Count; $i++) {
                     $str = $null
-                    $file = $savepath + $vList[$i].version + ".json"
+                    $file = $downloadPath + $versionHistory[$i].version + ".json"
 
                     if (Test-Path $file) {
                         $refNum += 1
 
                         switch ($true) {
-                            ($refNum -lt 10) { $str = " " + "$refNum" + '. ' + $vList[$i].version }
-                            ## ($refNum -ge 10) { $str = "$refNum" + '. ' + $vList[$i].version }
-                            ($refNum -eq 10) { $str = " a. さらに表示" }
+                            ($refNum -lt 10) { $str = " " + "$refNum" + '. ' + $versionHistory[$i].version }
+                            ## ($refNum -ge 10) { $str = "$refNum" + '. ' + $versionHistory[$i].version }
+                            ($refNum -eq 10) { $str = " a. see more" }
 
                         }
 
@@ -208,16 +197,16 @@ switch ($direction) {
 
                 }
 
-            } #switch ($answer) condition 1 end //
+            }
 
-        } #switch ($answer) end //
+        }
 
         ######TODO#####
         ## 日付を指定して変数に保存
         if ($refNum -lt 10) {
             $iDate = $null
             do {
-                $iDate = Read-Host "入力"
+                $iDate = Read-Host "Input"
     
                 if ($iDate -eq 0) { exit }
                 else { }
@@ -230,7 +219,7 @@ switch ($direction) {
 
             $iDate = $null
             do {
-                $iDate = Read-Host "入力"
+                $iDate = Read-Host "Input"
     
                 switch ($iDate) {
                     0 { exit }
@@ -239,18 +228,18 @@ switch ($direction) {
                             $aSwitch = $True
                             Write-Output ""
                             Write-Output "＜バージョン一覧＞"
-                            Write-Output " 0. プログラムを終了する"
+                            Write-Output " 0. Exit"
                             $refNum = 0
-                            for ($i = 1; $i -lt $vList.Count; $i++) { 
+                            for ($i = 1; $i -lt $versionHistory.Count; $i++) { 
                                 $str = $null 
-                                $file = $savepath + $vList[$i].version + ".json"
+                                $file = $downloadPath + $versionHistory[$i].version + ".json"
                     
                                 if (Test-Path $file) {
                                     $refNum += 1
                     
                                     switch ($true) {
-                                        ($refNum -lt 10) { $str = " " + "$refNum" + '. ' + $vList[$i].version }
-                                        ($refNum -ge 10) { $str = "$refNum" + '. ' + $vList[$i].version }
+                                        ($refNum -lt 10) { $str = " " + "$refNum" + '. ' + $versionHistory[$i].version }
+                                        ($refNum -ge 10) { $str = "$refNum" + '. ' + $versionHistory[$i].version }
         
                                     }
                                     Write-Output $str
@@ -267,11 +256,11 @@ switch ($direction) {
         }
 
         ## 最新版endpointsを呼び出す
-        $fLatest = $savepath + $version.latest + ".json"
+        $fLatest = $downloadPath + $version.latest + ".json"
         $eLatest = Get-Content -Path $fLatest | ConvertFrom-Json
 
         ## 指定した日付のendpointsを呼び出す
-        $fIndicated = $savepath + $vList[$iDate].version + ".json"
+        $fIndicated = $downloadPath + $versionHistory[$iDate].version + ".json"
         $eIndicated = Get-Content -Path $fIndicated | ConvertFrom-Json
 
         ## 比較の結果を保存するテーブルを宣言
@@ -284,7 +273,6 @@ switch ($direction) {
         $aList.Columns.Add("serviceArea")
         $aList.Columns.Add("serviceAreaDisplayName")
         $aList.Columns.Add("key")
-        # $aList.Columns.Add("key(HEX)")
         $aList.Columns.Add("tcpPorts")
         $aList.Columns.Add("udpPorts")
         $aList.Columns.Add("expressRoute")
@@ -350,8 +338,8 @@ switch ($direction) {
 
             $sUrl = Compare-Object -ReferenceObject @($ref.urls) -DifferenceObject @($dif.urls) -IncludeEqual | Sort-Object -Property InputObject 
             $sIp = Compare-Object -ReferenceObject @($ref.ips) -DifferenceObject @($dif.ips) -IncludeEqual 
-            $sIpHex = @($sIp) | ForEach-Object { toHex $_.InputObject } | Sort-Object 
-            $sIpDec = @($sIpHex) | ForEach-Object { toDec $_ } 
+            $sIpHex = @($sIp) | ForEach-Object { iptoHex $_.InputObject } | Sort-Object 
+            $sIpDec = @($sIpHex) | ForEach-Object { iptoDec $_ } 
             $sIpIndicator = New-Object System.Collections.ArrayList 
 
             for ($j = 0; $j -lt $sIpDec.Count; $j++) { 
@@ -390,12 +378,6 @@ switch ($direction) {
 
                     } 
                 } 
-
-                <#
-                        $aList.Rows.Add($no, $impact, "URL", $prop.id, $prop.serviceArea, $prop.serviceAreaDisplayName 
-                            , @($sUrl)[$j].InputObject, @($sUrl)[$j].InputObject, $prop.tcpPorts, $prop.udpPorts, $prop.expressRoute 
-                            , $prop.category, $prop.required, $prop.notes, $dpChecked) 
-                        #>
             
                 $aList.Rows.Add($no, $impact, $dpChecked, "URL", $prop.id, $prop.serviceArea, $prop.serviceAreaDisplayName 
                     , @($sUrl)[$j].InputObject, $prop.tcpPorts, $prop.udpPorts, $prop.expressRoute 
@@ -435,12 +417,6 @@ switch ($direction) {
                     } 
                 } 
 
-                <#
-                        $aList.Rows.Add($no, $impact, "IP", $prop.id, $prop.serviceArea, $prop.serviceAreaDisplayName 
-                            , @($sIpDec)[$j], @($sIpHex)[$j], $prop.tcpPorts, $prop.udpPorts, $prop.expressRoute 
-                            , $prop.category, $prop.required, $prop.notes, $dpChecked) 
-                        #>
-
                 $aList.Rows.Add($no, $impact, $dpChecked, "IP", $prop.id, $prop.serviceArea, $prop.serviceAreaDisplayName 
                     , @($sIpDec)[$j], $prop.tcpPorts, $prop.udpPorts, $prop.expressRoute 
                     , $prop.category, $prop.required, $prop.notes) 
@@ -449,57 +425,43 @@ switch ($direction) {
 
         } 
 
-    } #switch ($direction) condition (1) end //
+    }
 
-} #switch ($direction) end //
+}
 
 ## 比較した結果を保存するパスを指定 
-$savepath = $datapath + $foldername + "Reports" 
-if (!(Test-Path $savepath)) { New-Item -Path $datapath$foldername -Name "Reports" -ItemType "directory" } 
+if (!(Test-Path $reportPath)) { New-Item -Path $rootPath$directory -Name $subfolder_Report -ItemType "directory" }
 
 $time = Get-Date -Format "yyyyMMdd_HHmmss"
-$aList | ConvertTo-Csv -NoTypeInformation -UseCulture | Out-File -FilePath "$savepath\report($time).csv"
+$fileName = $subfolder_Report.Substring(0, $subfolder_Report.Length - 1) + "($time).csv"
+$aList | ConvertTo-Csv -NoTypeInformation -UseCulture | Out-File -FilePath $reportPath$fileName
 
-#Define locations and delimiter
-$csv = "$savepath\report($time).csv" #Location of the source file
-$xlsx = "$savepath\report($time).xlsx" #Desired location of output
+# Define locations and delimiter
+$csv = "$reportPath\report($time).csv" #Location of the source file
+$xlsx = "$reportPath\report($time).xlsx" #Desired location of output
 $delimiter = "," #Specify the delimiter used in the file
 
-# Create a new Excel workbook with one empty sheet
-$excel = New-Object -ComObject excel.application 
+# Create a new Excel workbook
+$excel = New-Object -ComObject excel.application
 $workbook = $excel.Workbooks.Add(1)
 $worksheet = $workbook.worksheets.Item(1)
 
 # Build the QueryTables.Add command and reformat the data
-$TxtConnector = ("TEXT;" + $csv)
-$Connector = $worksheet.QueryTables.add($TxtConnector, $worksheet.Range("A1"))
-$query = $worksheet.QueryTables.item($Connector.name)
+$txtConnector = ("TEXT;" + $csv)
+$connector = $worksheet.QueryTables.add($txtConnector, $worksheet.Range("A1"))
+$query = $worksheet.QueryTables.item($connector.name)
 $query.TextFileOtherDelimiter = $delimiter
 $query.TextFileParseType = 1
 $query.TextFileColumnDataTypes = , 1 * $worksheet.Cells.Columns.Count
 $query.AdjustColumnWidth = 1
 
-# Freeze the top row of the workbook
 $excel.Rows.Item("2:2").Select()
-$excel.ActiveWindow.FreezePanes = $true
+$excel.ActiveWindow.FreezePanes = $True
 
-# Set the header background color
 $worksheet.Range("A1:N1").interior.colorindex = 20
 
-# Execute & delete the import query
 $query.Refresh()
 $query.Delete()
 
-# Save & close the Workbook as XLSX.
-$Workbook.SaveAs($xlsx, 51)
+$workbook.SaveAs($xlsx, 51)
 $excel.Quit()
-
-<#
-        $answer = $null 
-        $datapath = $null 
-        $filename = $null 
-        $foldername = $null 
-        $savepath = $null 
-        $version = $null 
-        $ws = $null 
-        #>
